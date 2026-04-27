@@ -1,18 +1,30 @@
-[phases.setup]
+/nix/var/nix/profiles/default/lib[phases.setup]
 nixPkgs = [
-  "glib", "nss", "nspr", "atk", "cups", "libdrm", "libxkbcommon",
-  "libx11", "libxcomposite", "libxdamage", "libxfixes", "libxrandr",
-  "mesa", "pango", "cairo", "gtk3", "libgbm"
+  "glib",
+  "nss",
+  "nspr",
+  "atk",
+  "cups",
+  "libdrm",
+  "libxkbcommon",
+  "libx11",
+  "libxcomposite",
+  "libxdamage",
+  "libxfixes",
+  "libxrandr",
+  "mesa",
+  "pango",
+  "cairo",
+  "gtk3",
+  "libgbm",
+  "stdenv.cc.cc.lib" # Критически важный пакет для C++ либ
 ]
 
-[phases.install]
-cmds = ["pip install -r requirements.txt"]
-
 [phases.build]
-# Установка браузера именно на этапе сборки образа
-cmds = ["playwright install chromium"]
+cmds = [
+  "pip install -r requirements.txt",
+  "playwright install chromium"
+]
 
 [variables]
-LD_LIBRARY_PATH = "$LD_LIBRARY_PATH:/nix/var/nix/profiles/default/lib"
-# Указываем Playwright искать браузеры в стандартном месте
-PLAYWRIGHT_BROWSERS_PATH = "/root/.cache/ms-playwright"
+LD_LIBRARY_PATH = "/nix/var/nix/profiles/default/lib"
