@@ -18,3 +18,7 @@ nixPkgs = [
   "gtk3",
   "libgbm"
 ]
+
+# Добавь вот эту часть:
+[variables]
+LD_LIBRARY_PATH = "$LD_LIBRARY_PATH:/nix/var/nix/profiles/default/lib"
