@@ -31,5 +31,6 @@ packages = [
 PYTHON_VERSION = "3.11"
 
 [deploy]
+startCommand = "python app.py"
 restartPolicyType = "on_failure"
 restartPolicyMaxRetries = 5
