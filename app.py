@@ -34,7 +34,7 @@ HEADERS = {
 # ─── Telegram настройки ──────────────────────────────────────────────────────
 # Получи эти значения как описано выше
 TELEGRAM_BOT_TOKEN = os.getenv("8693315272:AAF1Hopx2a8ofPZ6jVFSVP2RJpDllnfBXcE", "")  # Токен от BotFather
-TELEGRAM_CHANNEL_ID = os.getenv("1001678361233", "")  # ID твоего канала
+TELEGRAM_CHANNEL_ID = os.getenv("-1001678361233", "")  # ID твоего канала
 
 # Если переменные окружения не установлены, используй жёсткие значения (не рекомендуется!)
 # TELEGRAM_BOT_TOKEN = "123456789:ABCdefGHIjklmnoPQRstUVwxyz"
