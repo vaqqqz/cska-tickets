@@ -2,25 +2,19 @@
 Spartak Ticket Tracker с Telegram интеграцией
 Использует Playwright для рендеринга JavaScript контента
 """
-
-import threading
-import time
-import logging
-from datetime import datetime
 import os
-from pathlib import Path
+import glob
 
-# --- ДОБАВЬ ЭТОТ БЛОК ТУТ ---
-# Настройка путей для библиотек Nix на Railway
-nix_lib_path = "/nix/var/nix/profiles/default/lib"
-if os.path.exists(nix_lib_path):
-    current_ld = os.environ.get("LD_LIBRARY_PATH", "")
-    os.environ["LD_LIBRARY_PATH"] = f"{current_ld}:{nix_lib_path}" if current_ld else nix_lib_path
-# ---------------------------
+# Пытаемся найти путь к библиотекам Nix более агрессивно
+nix_profiles = "/nix/var/nix/profiles/default/lib"
+nix_store_libs = "/nix/store/*/lib" # Поиск во всех установленных пакетах
 
-from flask import Flask, jsonify, render_template
-# Теперь импорт playwright пройдет успешно, так как он увидит нужные библиотеки
-from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
+paths = [nix_profiles]
+# Добавляем все пути из store, где есть папки lib (это решит проблему наверняка)
+paths.extend(glob.glob(nix_store_libs))
+
+current_ld = os.environ.get("LD_LIBRARY_PATH", "")
+os.environ["LD_LIBRARY_PATH"] = ":".join(filter(None, [current_ld] + paths))
 
 # ─── Настройки ───────────────────────────────────────────────────────────────
 
