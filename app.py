@@ -10,7 +10,16 @@ from datetime import datetime
 import os
 from pathlib import Path
 
+# --- ДОБАВЬ ЭТОТ БЛОК ТУТ ---
+# Настройка путей для библиотек Nix на Railway
+nix_lib_path = "/nix/var/nix/profiles/default/lib"
+if os.path.exists(nix_lib_path):
+    current_ld = os.environ.get("LD_LIBRARY_PATH", "")
+    os.environ["LD_LIBRARY_PATH"] = f"{current_ld}:{nix_lib_path}" if current_ld else nix_lib_path
+# ---------------------------
+
 from flask import Flask, jsonify, render_template
+# Теперь импорт playwright пройдет успешно, так как он увидит нужные библиотеки
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
 
 # ─── Настройки ───────────────────────────────────────────────────────────────
