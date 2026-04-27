@@ -209,8 +209,14 @@ def install_playwright():
     """Устанавливает браузер для Playwright (требуется один раз)."""
     try:
         # Проверяем, установлен ли браузер
-        with sync_playwright() as p:
-            p.chromium.launch(headless=True).close()
+        def install_playwright():
+    """Устанавливает браузер для Playwright (один раз при деплое)."""
+    try:
+        import subprocess
+        subprocess.run(["playwright", "install", "chromium"], check=True)
+        log.info("✅ Playwright браузер установлен")
+    except Exception as e:
+        log.error(f"❌ Ошибка установки Playwright: {e}")
         log.info("✅ Playwright браузер уже установлен")
     except Exception:
         log.warning("⚠️  Устанавливаю Playwright браузер...")
