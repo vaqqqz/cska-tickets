@@ -1,29 +1,34 @@
 import os
-import glob
+import subprocess
 import threading
 import time
 import logging
-import subprocess
 from datetime import datetime
 from pathlib import Path
 
-# ─── Настройка окружения (ДЕЛАТЬ СТРОГО ДО ИМПОРТА PLAYWRIGHT) ──────────────
+# ─── 1. ФОРСИРОВАННАЯ НАСТРОЙКА ОКРУЖЕНИЯ ──────────────────────────────────
+# Мы добавляем пути ко всем возможным местам, где Nix хранит библиотеки
+def install_and_link_libs():
+    # Пути, где Railway/Nix хранят скомпилированные .so файлы
+    nix_libs = [
+        "/nix/var/nix/profiles/default/lib",
+        "/usr/lib",
+        "/usr/local/lib"
+    ]
+    
+    # Пытаемся найти конкретные папки библиотек через системный поиск
+    try:
+        ld_output = subprocess.check_output(["find", "/nix/store", "-maxdepth", "2", "-name", "lib", "-type", "d"], text=True)
+        nix_libs.extend(ld_output.splitlines())
+    except:
+        pass
 
-def setup_nix_libs():
-    """Находит и подключает библиотеки Nix в LD_LIBRARY_PATH."""
-    # Стандартный путь Railway
-    paths = ["/nix/var/nix/profiles/default/lib"]
-    
-    # Ищем в /nix/store все папки lib для установленных пакетов
-    nix_store_libs = glob.glob("/nix/store/*/lib")
-    paths.extend(nix_store_libs)
-    
     current_ld = os.environ.get("LD_LIBRARY_PATH", "")
-    os.environ["LD_LIBRARY_PATH"] = ":".join(filter(None, [current_ld] + paths))
+    os.environ["LD_LIBRARY_PATH"] = ":".join(filter(None, [current_ld] + nix_libs))
 
-setup_nix_libs()
+install_and_link_libs()
 
-# Теперь импортируем всё остальное
+# ─── 2. ИМПОРТЫ PLAYWRIGHT (ПОСЛЕ НАСТРОЙКИ ПУТЕЙ) ─────────────────────────
 from flask import Flask, jsonify, render_template
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
 
