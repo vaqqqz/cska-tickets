@@ -4,17 +4,29 @@ Spartak Ticket Tracker с Telegram интеграцией
 """
 import os
 import glob
+import threading
+import time
+import logging  # <--- Проверьте, что эта строка на месте
+from datetime import datetime
+from pathlib import Path
 
-# Пытаемся найти путь к библиотекам Nix более агрессивно
-nix_profiles = "/nix/var/nix/profiles/default/lib"
-nix_store_libs = "/nix/store/*/lib" # Поиск во всех установленных пакетах
+# 1. Сначала настраиваем пути для библиотек (Railway/Nix)
+nix_lib_path = "/nix/var/nix/profiles/default/lib"
+if os.path.exists(nix_lib_path):
+    current_ld = os.environ.get("LD_LIBRARY_PATH", "")
+    os.environ["LD_LIBRARY_PATH"] = f"{current_ld}:{nix_lib_path}" if current_ld else nix_lib_path
 
-paths = [nix_profiles]
-# Добавляем все пути из store, где есть папки lib (это решит проблему наверняка)
-paths.extend(glob.glob(nix_store_libs))
+# 2. Настраиваем логирование (теперь 'logging' точно определен)
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
 
-current_ld = os.environ.get("LD_LIBRARY_PATH", "")
-os.environ["LD_LIBRARY_PATH"] = ":".join(filter(None, [current_ld] + paths))
+# 3. Импортируем Flask и Playwright
+from flask import Flask, jsonify, render_template
+from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
+
+# Далее ваш код...
 
 # ─── Настройки ───────────────────────────────────────────────────────────────
 
