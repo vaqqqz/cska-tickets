@@ -1,4 +1,3 @@
-/nix/var/nix/profiles/default/lib[phases.setup]
 nixPkgs = [
   "glib",
   "nss",
