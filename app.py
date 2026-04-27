@@ -181,7 +181,7 @@ def monitor_loop():
                         "Поспешите: "
                         "<a href='https://tickets.spartak.com/matches"
                         "?team=94974f94-27da-4350-81b3-9eb7afa82237'>"
-                        "Открыть билеты</a>
+                        "Открыть билеты</a>"
                     )
                     if send_telegram_message(telegram_msg):
                         state["telegram_sent"] = True
