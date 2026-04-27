@@ -207,9 +207,6 @@ def monitor_loop():
 
 def install_playwright():
     try:
-        # Проверяем, установлен ли браузер
-        def install_playwright():
-    try:
         import subprocess
         subprocess.run(["playwright", "install", "chromium"], check=True)
         log.info("✅ Playwright браузер установлен")
