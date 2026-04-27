@@ -136,6 +136,20 @@ def api_status():
     with state_lock: return jsonify(dict(state))
 
 if __name__ == "__main__":
-    # Фоновый поток
-    threading.Thread(target=monitor_loop, daemon=True).start()
-    app.run(host="0.0.0.0", port=int(os.getenv("PORT", 5000)))
+    # Проверка наличия браузера перед запуском
+    try:
+        log.info("Проверка наличия браузера Playwright...")
+        # Пытаемся запустить установку. Если он есть — команда пройдет мгновенно.
+        subprocess.run(["playwright", "install", "chromium"], check=True)
+        log.info("✅ Браузер готов к работе")
+    except Exception as e:
+        log.warning(f"⚠️ Не удалось запустить установку через subprocess: {e}")
+        # Запасной вариант установки
+        os.system("playwright install chromium")
+
+    # Запускаем фоновый поток мониторинга
+    monitor_thread = threading.Thread(target=monitor_loop, daemon=True)
+    monitor_thread.start()
+
+    log.info("🚀 Flask-сервер стартует на порту %s", os.getenv("PORT", "5000"))
+    app.run(host="0.0.0.0", port=int(os.getenv("PORT", 5000)), debug=False)
