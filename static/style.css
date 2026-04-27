@@ -196,12 +196,8 @@ body {
       background: #0077b3;
     }
 
-.warning-box {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 2rem;
-  padding: 2rem;
+  .warning-box {
+    border-left: 3px solid #f1c40f;
+    padding: 6px 10px;
+    margin: 6px 0;
   }
