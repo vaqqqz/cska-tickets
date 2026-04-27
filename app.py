@@ -1,47 +1,41 @@
-"""
-Spartak Ticket Tracker с Telegram интеграцией
-Использует Playwright для рендеринга JavaScript контента
-"""
 import os
 import glob
 import threading
 import time
-import logging  # <--- Проверьте, что эта строка на месте
+import logging
+import subprocess
 from datetime import datetime
 from pathlib import Path
 
-# 1. Сначала настраиваем пути для библиотек (Railway/Nix)
-nix_lib_path = "/nix/var/nix/profiles/default/lib"
-if os.path.exists(nix_lib_path):
+# ─── Настройка окружения (ДЕЛАТЬ СТРОГО ДО ИМПОРТА PLAYWRIGHT) ──────────────
+
+def setup_nix_libs():
+    """Находит и подключает библиотеки Nix в LD_LIBRARY_PATH."""
+    # Стандартный путь Railway
+    paths = ["/nix/var/nix/profiles/default/lib"]
+    
+    # Ищем в /nix/store все папки lib для установленных пакетов
+    nix_store_libs = glob.glob("/nix/store/*/lib")
+    paths.extend(nix_store_libs)
+    
     current_ld = os.environ.get("LD_LIBRARY_PATH", "")
-    os.environ["LD_LIBRARY_PATH"] = f"{current_ld}:{nix_lib_path}" if current_ld else nix_lib_path
+    os.environ["LD_LIBRARY_PATH"] = ":".join(filter(None, [current_ld] + paths))
 
-# 2. Настраиваем логирование (теперь 'logging' точно определен)
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s'
-)
+setup_nix_libs()
 
-# 3. Импортируем Flask и Playwright
+# Теперь импортируем всё остальное
 from flask import Flask, jsonify, render_template
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
 
-# Далее ваш код...
-
 # ─── Настройки ───────────────────────────────────────────────────────────────
 
-TARGET_URL = (
-    "https://tickets.spartak.com/matches"
-    "?team=94974f94-27da-4350-81b3-9eb7afa82237"
-)
+TARGET_URL = "https://tickets.spartak.com/matches?team=94974f94-27da-4350-81b3-9eb7afa82237"
 KEYWORD = "ЦСКА"
-CHECK_INTERVAL = 120  # секунды между проверками
+CHECK_INTERVAL = 120 
 
-# ─── Telegram настройки ──────────────────────────────────────────────────────
-TELEGRAM_BOT_TOKEN = os.getenv("8693315272:AAF1Hopx2a8ofPZ6jVFSVP2RJpDllnfBXcE", "")
-TELEGRAM_CHANNEL_ID = os.getenv("-1001678361233", "")
-
-# ─── Логирование ─────────────────────────────────────────────────────────────
+# Telegram (замени на переменные окружения в панели Railway для безопасности)
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "8693315272:AAF1Hopx2a8ofPZ6jVFSVP2RJpDllnfBXcE")
+TELEGRAM_CHANNEL_ID = os.getenv("TELEGRAM_CHANNEL_ID", "-1001678361233")
 
 logging.basicConfig(
     level=logging.INFO,
@@ -49,11 +43,7 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 log = logging.getLogger(__name__)
-
-# Отключаем verbose логи Werkzeug (Flask HTTP requests)
 logging.getLogger('werkzeug').setLevel(logging.WARNING)
-
-# ─── Состояние приложения ────────────────────────────────────────────────────
 
 state = {
     "tickets_found": False,
@@ -64,118 +54,52 @@ state = {
     "telegram_sent": False,
 }
 state_lock = threading.Lock()
-
-# ─── Flask ────────────────────────────────────────────────────────────────────
-
 app = Flask(__name__)
 
-
-@app.route("/")
-def index():
-    """Главная страница."""
-    return render_template("index.html", interval=CHECK_INTERVAL)
-
-
-@app.route("/api/status")
-def api_status():
-    """JSON-эндпоинт: текущий статус мониторинга."""
-    with state_lock:
-        return jsonify(dict(state))
-
-
-# ─── Telegram функции ────────────────────────────────────────────────────────
+# ─── Логика ──────────────────────────────────────────────────────────────────
 
 def send_telegram_message(message: str) -> bool:
-    """
-    Отправляет сообщение в Telegram канал.
-    Возвращает True если успешно, иначе False.
-    """
-    if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHANNEL_ID:
-        log.warning("⚠️  Telegram не настроен. Установи переменные окружения.")
-        return False
-
     import requests
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-    payload = {
-        "chat_id": TELEGRAM_CHANNEL_ID,
-        "text": message,
-        "parse_mode": "HTML",
-    }
-
+    payload = {"chat_id": TELEGRAM_CHANNEL_ID, "text": message, "parse_mode": "HTML"}
     try:
         response = requests.post(url, json=payload, timeout=10)
         response.raise_for_status()
-        log.info("✅ Сообщение отправлено в Telegram")
         return True
     except Exception as exc:
-        log.error("❌ Ошибка при отправке в Telegram: %s", exc)
+        log.error("❌ Telegram error: %s", exc)
         return False
 
-
-# ─── Мониторинг с Playwright ────────────────────────────────────────────────
-
 def check_tickets() -> bool:
-    """
-    Загружает страницу Спартака с помощью Playwright (рендерит JavaScript).
-    Ищет ключевое слово в полностью загруженной странице.
-    Возвращает True если слово найдено, иначе False.
-    """
     try:
         with sync_playwright() as p:
-            # Запускаем браузер в headless режиме
-            browser = p.chromium.launch(headless=True)
-            page = browser.new_page()
+            # КРИТИЧЕСКИЕ ФЛАГИ ДЛЯ RAILWAY
+            browser = p.chromium.launch(
+                headless=True,
+                args=[
+                    "--no-sandbox",
+                    "--disable-setuid-sandbox",
+                    "--disable-dev-shm-usage",
+                    "--disable-gpu",
+                ]
+            )
+            context = browser.new_context(user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36')
+            page = context.new_page()
             
-            # Устанавливаем user-agent
-            page.set_extra_http_headers({
-                'User-Agent': (
-                    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
-                    'AppleWebKit/537.36 (KHTML, like Gecko) '
-                    'Chrome/124.0.0.0 Safari/537.36'
-                )
-            })
-            
-            # Загружаем страницу (ждём загрузки всех ресурсов)
-            log.info("🔄 Загружаю страницу Спартака...")
+            log.info("🔄 Загружаю страницу...")
             page.goto(TARGET_URL, wait_until="networkidle", timeout=60000)
-            
-            # Даём странице ещё 3 секунды на рендеринг
             page.wait_for_timeout(3000)
             
-            # Получаем весь текст со страницы
-            page_text = page.content()
-            
+            content = page.content()
             browser.close()
             
-            # Ищем ключевое слово (без учёта регистра)
-            found = KEYWORD.upper() in page_text.upper()
-            
-            return found
-    
-    except PlaywrightTimeoutError:
-        log.error("❌ Timeout при загрузке страницы (более 60 сек)")
-        raise
+            return KEYWORD.upper() in content.upper()
     except Exception as exc:
-        log.error("❌ Ошибка при загрузке страницы: %s", exc)
+        log.error("❌ Ошибка Playwright: %s", exc)
         raise
-
 
 def monitor_loop():
-    """Фоновый поток: бесконечный цикл проверки билетов."""
-    log.info("═" * 70)
     log.info("🎫 СПАРТАК ТРЕКЕР ЗАПУЩЕН")
-    log.info("─" * 70)
-    log.info("Интервал проверки: %d сек", CHECK_INTERVAL)
-    log.info("Ключевое слово: «%s»", KEYWORD)
-    log.info("Способ загрузки: Playwright (с рендерингом JavaScript)")
-    
-    if TELEGRAM_BOT_TOKEN and TELEGRAM_CHANNEL_ID:
-        log.info("✅ Telegram интеграция: АКТИВИРОВАНА")
-    else:
-        log.warning("⚠️  Telegram интеграция: НЕ НАСТРОЕНА")
-    
-    log.info("═" * 70)
-
     while True:
         now_iso = datetime.now().isoformat(timespec="seconds")
         try:
@@ -183,66 +107,35 @@ def monitor_loop():
             found = check_tickets()
             
             with state_lock:
-                state["tickets_found"] = found
-                state["last_check"] = now_iso
-                state["last_status"] = "found" if found else "not_found"
-                state["error_msg"] = None
-                state["check_count"] += 1
+                state.update({
+                    "tickets_found": found,
+                    "last_check": now_iso,
+                    "last_status": "found" if found else "not_found",
+                    "error_msg": None,
+                    "check_count": state["check_count"] + 1
+                })
 
-                # Если билеты найдены и ещё не отправили — отправляем
                 if found and not state["telegram_sent"]:
-                    telegram_msg = (
-                        "🎫 <b>БИЛЕТЫ ПОЯВИЛИСЬ!</b>\n\n"
-                        "Поспешите: "
-                        "<a href='https://tickets.spartak.com/matches"
-                        "?team=94974f94-27da-4350-81b3-9eb7afa82237'>"
-                        "Открыть билеты</a>"
-                    )
-                    if send_telegram_message(telegram_msg):
+                    msg = f"🎫 <b>БИЛЕТЫ НА {KEYWORD}!</b>\n<a href='{TARGET_URL}'>Купить</a>"
+                    if send_telegram_message(msg):
                         state["telegram_sent"] = True
-
-            if found:
-                log.warning("🔴 БИЛЕТЫ НАЙДЕНЫ! «%s» обнаружено на странице!", KEYWORD)
-            else:
-                log.info("⚪ Билеты не найдены")
-
+            
+            if found: log.warning("🔴 НАЙДЕНО!")
         except Exception as exc:
             with state_lock:
-                state["last_check"] = now_iso
-                state["last_status"] = "error"
                 state["error_msg"] = str(exc)
-                state["check_count"] += 1
-            log.error("❌ Ошибка: %s", exc)
-
-        log.info("⏳ Следующая проверка через %d сек...\n", CHECK_INTERVAL)
+                state["last_status"] = "error"
+        
         time.sleep(CHECK_INTERVAL)
 
+@app.route("/")
+def index(): return render_template("index.html", interval=CHECK_INTERVAL)
 
-# ─── Инициализация Playwright ───────────────────────────────────────────────
-
-def install_playwright():
-    try:
-        import subprocess
-        subprocess.run(["playwright", "install", "chromium"], check=True)
-        log.info("✅ Playwright браузер установлен")
-    except Exception as e:
-        log.error(f"❌ Ошибка установки Playwright: {e}")
-        log.info("✅ Playwright браузер уже установлен")
-    except Exception:
-        log.warning("⚠️  Устанавливаю Playwright браузер...")
-        os.system("playwright install chromium")
-        log.info("✅ Playwright браузер установлен")
-
-
-# ─── Точка входа ─────────────────────────────────────────────────────────────
+@app.route("/api/status")
+def api_status():
+    with state_lock: return jsonify(dict(state))
 
 if __name__ == "__main__":
-    # Устанавливаем браузер, если нужно
-    install_playwright()
-    
-    # Запускаем фоновый поток мониторинга
-    monitor_thread = threading.Thread(target=monitor_loop, daemon=True)
-    monitor_thread.start()
-
-    log.info("🚀 Flask-сервер стартует на http://0.0.0.0:5000")
-    app.run(host="0.0.0.0", port=5000, debug=False)
+    # Фоновый поток
+    threading.Thread(target=monitor_loop, daemon=True).start()
+    app.run(host="0.0.0.0", port=int(os.getenv("PORT", 5000)))
