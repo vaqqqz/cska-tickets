@@ -1,0 +1,175 @@
+/* ─────────────────────────────────────────
+   CLEAN TERMINAL UI · минимализм
+   ───────────────────────────────────────── */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=JetBrains+Mono:wght@400;600&display=swap');
+
+:root {
+  --bg: #0a0a0a;
+  --surface: #111;
+  --border: #1f1f1f;
+  --text: #eaeaea;
+  --muted: #666;
+  --accent: #e8001c;
+
+  --font-main: 'Inter', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+/* reset */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-mono);
+}
+
+/* layout */
+.container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2rem;
+  padding: 2rem;
+}
+
+/* header */
+.header {
+  text-align: center;
+}
+
+.badge {
+  font-size: 0.65rem;
+  letter-spacing: 0.2em;
+  color: var(--muted);
+  margin-bottom: 1rem;
+}
+
+.title {
+  font-family: var(--font-main);
+  font-size: clamp(1.8rem, 4vw, 2.6rem);
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+
+.title .accent {
+  color: var(--accent);
+}
+
+/* status block */
+.status-block {
+  width: 100%;
+  max-width: 480px;
+  border: 1px solid var(--border);
+  padding: 1.5rem;
+  background: var(--surface);
+  text-align: center;
+}
+
+.status-text {
+  font-family: var(--font-main);
+  font-size: 1.4rem;
+  font-weight: 600;
+}
+
+/* states */
+.status-block.found {
+  border-color: var(--accent);
+}
+
+.status-block.found .status-text {
+  color: var(--accent);
+}
+
+.status-block.error .status-text {
+  color: #ff8c00;
+  font-size: 1rem;
+}
+
+/* timer */
+.timer-block {
+  text-align: center;
+}
+
+.timer-label {
+  font-size: 0.6rem;
+  letter-spacing: 0.2em;
+  color: var(--muted);
+  margin-bottom: 0.4rem;
+}
+
+.timer-digits {
+  font-family: var(--font-mono);
+  font-size: 2rem;
+  letter-spacing: 0.05em;
+}
+
+.timer-sublabel {
+  font-size: 0.6rem;
+  color: var(--muted);
+  margin-top: 0.3rem;
+}
+
+/* meta */
+.meta-block {
+  width: 100%;
+  max-width: 480px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.meta-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.6rem 1rem;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.75rem;
+}
+
+.meta-row:last-child {
+  border-bottom: none;
+}
+
+.meta-key {
+  color: var(--muted);
+}
+
+.meta-val {
+  color: var(--text);
+}
+
+/* button */
+.btn-link {
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  text-decoration: none;
+  color: var(--text);
+  border: 1px solid var(--border);
+  padding: 0.6rem 1.4rem;
+}
+
+.btn-link:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* footer */
+.refresh-note {
+  font-size: 0.6rem;
+  color: var(--muted);
+}
+
+/* mobile */
+@media (max-width: 480px) {
+  .meta-row {
+    flex-direction: column;
+    gap: 0.2rem;
+  }
+}

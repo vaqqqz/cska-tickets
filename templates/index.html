@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Билеты на ЦСКА · Спартак</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+<body>
+
+  <!-- ─── Фоновые частицы ──────────────────────────────────────────── -->
+  <div class="bg-grid"></div>
+  <div class="scanline"></div>
+
+  <main class="container">
+
+    <!-- Заголовок -->
+    <header class="header">
+      <div class="badge">СПАРТАК · МОНИТОРИНГ</div>
+      <h1 class="title">ЕСТЬ ЛИ БИЛЕТЫ<br><span class="accent">НА ЦСКА?</span></h1>
+    </header>
+
+    <!-- Основной статус (обновляется через JS) -->
+    <section class="status-block" id="status-block">
+      <div class="status-icon" id="status-icon">⏳</div>
+      <p class="status-text" id="status-text">Загрузка…</p>
+    </section>
+
+    <!-- Таймер обратного отсчёта до 6 мая 20:00 -->
+    <section class="timer-block">
+      <p class="timer-label">ДО МАТЧА ОСТАЛОСЬ:</p>
+      <div class="timer-digits" id="countdown">--:--:--:--</div>
+      <p class="timer-sublabel">ДД · ЧЧ · ММ · СС</p>
+    </section>
+
+    <!-- Мета-информация -->
+    <section class="meta-block">
+      <div class="meta-row">
+        <span class="meta-key">Последняя проверка</span>
+        <span class="meta-val" id="last-check">—</span>
+      </div>
+      <div class="meta-row">
+        <span class="meta-key">Проверок всего</span>
+        <span class="meta-val" id="check-count">—</span>
+      </div>
+      <div class="meta-row">
+        <span class="meta-key">Интервал</span>
+        <span class="meta-val">{{ interval }} сек</span>
+      </div>
+      <div class="meta-row" id="error-row" style="display:none">
+        <span class="meta-key">Ошибка</span>
+        <span class="meta-val error-val" id="error-msg">—</span>
+      </div>
+    </section>
+
+    <!-- Ссылка на сайт -->
+    <a class="btn-link"
+       href="https://tickets.spartak.com/matches?team=94974f94-27da-4350-81b3-9eb7afa82237"
+       target="_blank" rel="noopener">
+      🎫 Открыть страницу билетов
+    </a>
+
+    <p class="refresh-note">Страница обновляется каждые <strong>{{ interval }}</strong> сек</p>
+
+  </main>
+
+  <script>
+    // ─── Таймер обратного отсчёта ────────────────────────────────────
+    const TARGET_DATE = new Date('2026-05-06T20:00:00');
+    console.log('Target date:', TARGET_DATE);
+    console.log('Current time:', new Date());
+
+    function pad(n) { return String(n).padStart(2, '0'); }
+
+    function updateCountdown() {
+      const now  = new Date();
+      const diff = TARGET_DATE - now;
+
+      console.log('Diff:', diff, 'ms');
+
+      if (diff <= 0) {
+        document.getElementById('countdown').textContent = '00·00·00·00';
+        return;
+      }
+
+      const days    = Math.floor(diff / 86400000);
+      const hours   = Math.floor((diff % 86400000) / 3600000);
+      const minutes = Math.floor((diff % 3600000)  / 60000);
+      const seconds = Math.floor((diff % 60000)    / 1000);
+
+      const display = `${pad(days)}·${pad(hours)}·${pad(minutes)}·${pad(seconds)}`;
+      console.log('Display:', display);
+      document.getElementById('countdown').textContent = display;
+    }
+
+    setInterval(updateCountdown, 1000);
+    updateCountdown();
+
+    // ─── Опрос API статуса ────────────────────────────────────────────
+    const CHECK_INTERVAL_MS = {{ interval }} * 1000;
+
+    async function fetchStatus() {
+      try {
+        const res  = await fetch('/api/status');
+        const data = await res.json();
+
+        const block = document.getElementById('status-block');
+        const icon  = document.getElementById('status-icon');
+        const text  = document.getElementById('status-text');
+
+        // Обновляем статус
+        if (data.last_status === 'found') {
+          block.className = 'status-block found';
+          icon.textContent = '🔴';
+          text.textContent = 'ДА, БИЛЕТЫ ПОЯВИЛИСЬ!';
+        } else if (data.last_status === 'not_found') {
+          block.className = 'status-block not-found';
+          icon.textContent = '⚪';
+          text.textContent = 'ПОКА НЕТ БИЛЕТОВ';
+        } else if (data.last_status === 'error') {
+          block.className = 'status-block error';
+          icon.textContent = '⚠️';
+          text.textContent = 'ОШИБКА ПРОВЕРКИ';
+        } else {
+          block.className = 'status-block';
+          icon.textContent = '⏳';
+          text.textContent = 'Загрузка…';
+        }
+
+        // Мета
+        if (data.last_check) {
+          const d = new Date(data.last_check);
+          document.getElementById('last-check').textContent =
+            d.toLocaleTimeString('ru-RU', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+        }
+        document.getElementById('check-count').textContent = data.check_count || '—';
+
+        // Ошибка
+        const errRow = document.getElementById('error-row');
+        if (data.error_msg) {
+          errRow.style.display = 'flex';
+          document.getElementById('error-msg').textContent = data.error_msg;
+        } else {
+          errRow.style.display = 'none';
+        }
+
+      } catch (e) {
+        console.warn('Не удалось получить статус:', e);
+      }
+    }
+
+    // Сразу и потом по интервалу
+    fetchStatus();
+    setInterval(fetchStatus, CHECK_INTERVAL_MS);
+  </script>
+
+</body>
+</html>
