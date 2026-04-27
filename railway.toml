@@ -1,0 +1,35 @@
+[build]
+builder = "nixpacks"
+
+[build.nixpacks]
+packages = [
+  "libglib2.0-0",
+  "libx11-6",
+  "libxext6",
+  "libxrender1",
+  "libxrandr2",
+  "libgconf-2-4",
+  "libatk1.0-0",
+  "libatk-bridge2.0-0",
+  "libcups2",
+  "libdrm2",
+  "libxss1",
+  "libxtst6",
+  "libpci3",
+  "libappindicator3-1",
+  "libnspr4",
+  "libnss3",
+  "fonts-liberation",
+  "xdg-utils",
+  "libxkbcommon0",
+  "libxcb1",
+  "libegl1",
+  "libgbm1"
+]
+
+[env]
+PYTHON_VERSION = "3.11"
+
+[deploy]
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 5
