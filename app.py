@@ -206,11 +206,9 @@ def monitor_loop():
 # ─── Инициализация Playwright ───────────────────────────────────────────────
 
 def install_playwright():
-    """Устанавливает браузер для Playwright (требуется один раз)."""
     try:
         # Проверяем, установлен ли браузер
         def install_playwright():
-    """Устанавливает браузер для Playwright (один раз при деплое)."""
     try:
         import subprocess
         subprocess.run(["playwright", "install", "chromium"], check=True)
